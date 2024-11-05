@@ -1,6 +1,5 @@
 const express = require("express");
 const mysql = require("mysql2");
-const { Client } = require("pg");
 
 // Create Express app
 const app = express();
@@ -21,17 +20,17 @@ const dbConfigMySQL2 = {
   database: "skill_course_database",
 };
 
-const dbConfigPostgres = {
-  host: "192.168.41.220",
-  user: "postgres",
-  password: "8077",
-  database: "hospital1",
+const dbConfigMySQL3 = {
+  host: "192.168.42.192",
+  user: "root",
+  password: "admin",
+  database: "tutorDB",
 };
 
 // Create connections
 const connectionMySQL1 = mysql.createConnection(dbConfigMySQL1);
 const connectionMySQL2 = mysql.createConnection(dbConfigMySQL2);
-const clientPostgres = new Client(dbConfigPostgres);
+const connectionMySQL3 = mysql.createConnection(dbConfigMySQL3);
 
 // Function to check connections and display tables
 async function checkConnections() {
@@ -62,18 +61,17 @@ async function checkConnections() {
   });
 
   // PostgreSQL Database
-  try {
-    await clientPostgres.connect();
-    console.log("Connected to PostgreSQL Database");
-    const res = await clientPostgres.query(
-      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
-    );
-    console.log("Tables in PostgreSQL Database:", res.rows);
-  } catch (error) {
-    console.error("PostgreSQL Database Connection Error:", error);
-  } finally {
-    await clientPostgres.end();
-  }
+  connectionMySQL3.connect((err) => {
+    if (err) {
+      console.error("MySQL Database 3 Connection Error:", err);
+    } else {
+      console.log("Connected to MySQL Database 3");
+      connectionMySQL3.query("SHOW TABLES ", (err, tables) => {
+        if (err) throw err;
+        console.log("Tables in MySQL Database 3:", tables);
+      });
+    }
+  });
 }
 
 // Call the checkConnections function
