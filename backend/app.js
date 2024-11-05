@@ -33,54 +33,53 @@ const connectionMySQL1 = mysql.createConnection(dbConfigMySQL1);
 const connectionMySQL2 = mysql.createConnection(dbConfigMySQL2);
 const clientPostgres = new Client(dbConfigPostgres);
 
-// Unified query function
-async function federateQuery(queryType, searchTerm) {
-  const results = [];
-
+// Function to check connections and display tables
+async function checkConnections() {
   // MySQL Database 1
-  connectionMySQL1.query(
-    `SELECT course_name, instructor, rating FROM courses WHERE ${queryType} LIKE ?`,
-    [`%${searchTerm}%`],
-    (err, res) => {
-      if (err) throw err;
-      results.push(...res);
+  connectionMySQL1.connect((err) => {
+    if (err) {
+      console.error("MySQL Database 1 Connection Error:", err);
+    } else {
+      console.log("Connected to MySQL Database 1");
+      connectionMySQL1.query("SHOW TABLES", (err, tables) => {
+        if (err) throw err;
+        console.log("Tables in MySQL Database 1:", tables);
+      });
     }
-  );
+  });
 
   // MySQL Database 2
-  connectionMySQL2.query(
-    `SELECT course_name, tutor_name AS instructor, rating FROM courses WHERE ${queryType} LIKE ?`,
-    [`%${searchTerm}%`],
-    (err, res) => {
-      if (err) throw err;
-      results.push(...res);
+  connectionMySQL2.connect((err) => {
+    if (err) {
+      console.error("MySQL Database 2 Connection Error:", err);
+    } else {
+      console.log("Connected to MySQL Database 2");
+      connectionMySQL2.query("Select * from courses ", (err, tables) => {
+        if (err) throw err;
+        console.log("Tables in MySQL Database 2:", tables);
+      });
     }
-  );
+  });
 
   // PostgreSQL Database
-  await clientPostgres.connect();
-  const pgQuery = `SELECT course_name, instructor, enrolled_role_student AS enrollments FROM courses WHERE ${queryType} LIKE $1`;
-  const pgRes = await clientPostgres.query(pgQuery, [`%${searchTerm}%`]);
-  results.push(...pgRes.rows);
-  await clientPostgres.end();
-
-  return results;
+  try {
+    await clientPostgres.connect();
+    console.log("Connected to PostgreSQL Database");
+    const res = await clientPostgres.query(
+      "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+    );
+    console.log("Tables in PostgreSQL Database:", res.rows);
+  } catch (error) {
+    console.error("PostgreSQL Database Connection Error:", error);
+  } finally {
+    await clientPostgres.end();
+  }
 }
 
-// Define the search route
-app.get("/search", async (req, res) => {
-  const { queryType, searchTerm } = req.query;
-  try {
-    const data = await federateQuery(queryType, searchTerm);
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// Call the checkConnections function
+checkConnections();
 
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
-// Add connection logic if needed, similar to previous examples
